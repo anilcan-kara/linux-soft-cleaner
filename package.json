@@ -1,0 +1,35 @@
+{
+  "name": "linux-soft-cleaner",
+  "version": "0.1.0",
+  "description": "A fast, safe, and minimal disk cleanup tool for Linux servers — written in Rust",
+  "main": "bin/cli.js",
+  "bin": {
+    "linux-soft-cleaner": "./bin/cli.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anilcan-kara/linux-soft-cleaner.git"
+  },
+  "keywords": [
+    "linux",
+    "disk",
+    "cleanup",
+    "cleaner",
+    "rust",
+    "server",
+    "admin",
+    "devops"
+  ],
+  "author": "Anilcan Kara",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/anilcan-kara/linux-soft-cleaner/issues"
+  },
+  "homepage": "https://github.com/anilcan-kara/linux-soft-cleaner#readme",
+  "engines": {
+    "node": ">=14"
+  }
+}
