@@ -2,126 +2,103 @@
 
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
-const { spawnSync } = require('child_process');
 const https = require('https');
+const { spawn } = require('child_process');
 
-const VERSION = '0.1.0';
+const VERSION = '0.1.1';
 const REPO = 'anilcan-kara/linux-soft-cleaner';
 
-function getTarget() {
-    const platform = os.platform();
-    const arch = os.arch();
+// Map Node platform/arch to release assets
+const platform = process.platform;
+const arch = process.arch;
 
-    if (platform === 'linux') {
-        if (arch === 'x64') return 'x86_64-unknown-linux-musl';
-        if (arch === 'arm64') return 'aarch64-unknown-linux-musl';
-    } else if (platform === 'darwin') {
-        if (arch === 'x64') return 'x86_64-apple-darwin';
-        if (arch === 'arm64') return 'aarch64-apple-darwin';
-    }
-    return null;
+let osKey = '';
+let ext = '';
+
+if (platform === 'darwin') {
+  osKey = 'darwin';
+} else if (platform === 'linux') {
+  osKey = 'linux';
+} else {
+  console.error(`[LinuxSoftCleaner] Unsupported platform: ${platform}. This tool only supports Linux and macOS.`);
+  process.exit(1);
 }
 
-function downloadFile(url, destPath) {
-    return new Promise((resolve, reject) => {
-        const file = fs.createWriteStream(destPath);
-        
-        const request = (targetUrl) => {
-            https.get(targetUrl, (response) => {
-                if (response.statusCode === 301 || response.statusCode === 302) {
-                    // Handle redirects
-                    request(response.headers.location);
-                    return;
-                }
-                
-                if (response.statusCode !== 200) {
-                    reject(new Error(`Failed to download binary: HTTP ${response.statusCode}`));
-                    return;
-                }
+let archKey = '';
+if (arch === 'x64') {
+  archKey = 'x64';
+} else if (arch === 'arm64') {
+  archKey = 'arm64';
+} else {
+  console.error(`[LinuxSoftCleaner] Unsupported architecture: ${arch}`);
+  process.exit(1);
+}
 
-                response.pipe(file);
-                
-                file.on('finish', () => {
-                    file.close();
-                    resolve();
-                });
-            }).on('error', (err) => {
-                fs.unlink(destPath, () => {});
-                reject(err);
-            });
-        };
+const binaryName = `linux-soft-cleaner-${osKey}-${archKey}${ext}`;
+const targetDir = path.join(__dirname, '..', 'dist');
+const binaryPath = path.join(targetDir, `linux-soft-cleaner${ext}`);
+const downloadUrl = `https://github.com/${REPO}/releases/download/v${VERSION}/${binaryName}`;
 
-        request(url);
+function downloadFile(url, dest, callback) {
+  https.get(url, (res) => {
+    if (res.statusCode === 302 || res.statusCode === 301) {
+      downloadFile(res.headers.location, dest, callback);
+      return;
+    }
+    if (res.statusCode !== 200) {
+      callback(new Error(`Failed to download binary: HTTP ${res.statusCode}`));
+      return;
+    }
+    const file = fs.createWriteStream(dest);
+    res.pipe(file);
+    file.on('finish', () => {
+      file.close(callback);
     });
+  }).on('error', (err) => {
+    fs.unlink(dest, () => {});
+    callback(err);
+  });
 }
 
-function main() {
-    const target = getTarget();
-    if (!target) {
-        console.error(`Error: Unsupported platform/architecture (${os.platform()}/${os.arch()}).`);
-        console.error("linux-soft-cleaner only supports 64-bit Linux and macOS.");
-        process.exit(1);
-    }
+function runBinary() {
+  const args = process.argv.slice(2);
+  const child = spawn(binaryPath, args, { stdio: 'inherit' });
 
-    const homeDir = os.homedir();
-    const installDir = path.join(homeDir, '.linux-soft-cleaner', `v${VERSION}`);
-    const binName = 'linux-soft-cleaner';
-    const binPath = path.join(installDir, binName);
+  child.on('close', (code) => {
+    process.exit(code === null ? 1 : code);
+  });
 
-    if (fs.existsSync(binPath)) {
-        // Run the binary directly
-        runBinary(binPath);
-        return;
-    }
-
-    // Binary does not exist, download it
-    console.log(`linux-soft-cleaner binary not found locally. Downloading for ${target}...`);
-    
-    if (!fs.existsSync(installDir)) {
-        fs.mkdirSync(installDir, { recursive: true });
-    }
-
-    const archiveName = `linux-soft-cleaner-${target}.tar.gz`;
-    const archivePath = path.join(installDir, archiveName);
-    const downloadUrl = `https://github.com/${REPO}/releases/download/v${VERSION}/${archiveName}`;
-
-    downloadFile(downloadUrl, archivePath)
-        .then(() => {
-            // Extract the tar.gz file
-            console.log("Extracting archive...");
-            const tarResult = spawnSync('tar', ['-xzf', archivePath, '-C', installDir]);
-            if (tarResult.status !== 0) {
-                throw new Error(`Failed to extract tar archive: ${tarResult.stderr.toString()}`);
-            }
-
-            // Cleanup archive file
-            try {
-                fs.unlinkSync(archivePath);
-            } catch (e) {}
-
-            // Ensure executable permissions
-            try {
-                fs.chmodSync(binPath, '755');
-            } catch (e) {}
-
-            console.log("Download and extraction complete.\n");
-            runBinary(binPath);
-        })
-        .catch((err) => {
-            console.error(`Error: Failed to install binary: ${err.message}`);
-            // Cleanup folders on failure
-            try {
-                fs.unlinkSync(archivePath);
-            } catch (e) {}
-            process.exit(1);
-        });
+  child.on('error', (err) => {
+    console.error(`[LinuxSoftCleaner] Failed to start cleaner binary:`, err);
+    process.exit(1);
+  });
 }
 
-function runBinary(binaryPath) {
-    const args = process.argv.slice(2);
-    const result = spawnSync(binaryPath, args, { stdio: 'inherit' });
-    process.exit(result.status ?? 0);
-}
+// Check if binary exists
+if (fs.existsSync(binaryPath)) {
+  runBinary();
+} else {
+  console.log(`\x1b[36m[LinuxSoftCleaner]\x1b[0m Downloading platform binary v${VERSION} (${osKey}-${archKey})...`);
+  
+  if (!fs.existsSync(targetDir)) {
+    fs.mkdirSync(targetDir, { recursive: true });
+  }
 
-main();
+  downloadFile(downloadUrl, binaryPath, (err) => {
+    if (err) {
+      console.error(`\x1b[31m[LinuxSoftCleaner] Download failed:\x1b[0m`, err.message);
+      console.error(`Please download linux-soft-cleaner manually from https://github.com/${REPO}/releases`);
+      process.exit(1);
+    }
+
+    // Set execute permissions
+    try {
+      fs.chmodSync(binaryPath, 0755);
+    } catch (chmodErr) {
+      console.warn(`[LinuxSoftCleaner] Failed to set permissions on binary:`, chmodErr);
+    }
+
+    console.log(`\x1b[32m[LinuxSoftCleaner] Binary downloaded successfully!\x1b[0m\n`);
+    runBinary();
+  });
+}

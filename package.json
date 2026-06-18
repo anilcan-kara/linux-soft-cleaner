@@ -1,6 +1,6 @@
 {
   "name": "linux-soft-cleaner",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A fast, safe, and minimal disk cleanup tool for Linux servers — written in Rust",
   "main": "bin/cli.js",
   "bin": {

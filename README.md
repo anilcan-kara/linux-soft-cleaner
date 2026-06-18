@@ -52,7 +52,11 @@ cargo install linux-soft-cleaner
 ```
 
 ### 5. Download statically linked binaries
-Get the precompiled static binaries for your system directly from the [GitHub Releases Page](https://github.com/anilcan-kara/linux-soft-cleaner/releases).
+You can download the precompiled static binary for your platform directly from the GitHub Release assets:
+- 🐧 **Linux (x64)**: [linux-soft-cleaner-linux-x64](https://github.com/anilcan-kara/linux-soft-cleaner/releases/download/v0.1.1/linux-soft-cleaner-linux-x64)
+- 🐧 **Linux (ARM64)**: [linux-soft-cleaner-linux-arm64](https://github.com/anilcan-kara/linux-soft-cleaner/releases/download/v0.1.1/linux-soft-cleaner-linux-arm64)
+- 🍎 **macOS (x64)**: [linux-soft-cleaner-darwin-x64](https://github.com/anilcan-kara/linux-soft-cleaner/releases/download/v0.1.1/linux-soft-cleaner-darwin-x64)
+- 🍎 **macOS (ARM64)**: [linux-soft-cleaner-darwin-arm64](https://github.com/anilcan-kara/linux-soft-cleaner/releases/download/v0.1.1/linux-soft-cleaner-darwin-arm64)
 
 ---
 
